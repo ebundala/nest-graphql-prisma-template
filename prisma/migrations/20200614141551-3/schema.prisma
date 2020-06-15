@@ -3,7 +3,7 @@
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url = "***"
 }
 
 generator client {
@@ -92,7 +92,7 @@ model File {
 
 model Chat {
   id        Int       @default(autoincrement()) @id
-  subject     String
+  title     String
   published Boolean   @default(false)
   author    User      @relation(name: "chat_author", fields: [authorId], references: [id])
   authorId  Int
@@ -106,7 +106,6 @@ model Message {
   id          Int       @default(autoincrement()) @id
   published   Boolean   @default(false)
   isReply     Boolean   @default(false)
-  body        String
   author      User      @relation(fields: [authorId], references: [id])
   authorId    Int
   replies     Message[]
@@ -144,8 +143,8 @@ model TokenOrder {
 model Transaction {
   id                 Int        @default(autoincrement()) @id
   state              State      @default(PENDING)
-  externalTransRefId String     @unique
-  transRefId         String     @unique
+  externalTransRefId String
+  transRefId         String
   amount             Float
   updatedAt          DateTime   @updatedAt
   createdAt          DateTime   @default(now())
@@ -155,8 +154,6 @@ model Transaction {
 enum Role {
   USER
   ADMIN
-  MODERATOR
-  ORGANIZATION
 }
 
 enum State {
