@@ -1,7 +1,11 @@
 type User {
-  id:          ID!         
+  id:          Int  
+  uid:         ID!       
   email:       String!       
-  name:        String!
+  displayName: String!
+  phoneNumber: String
+  emailVerified: Boolean!
+  disabled: Boolean!
   avator:      File         
   role:        Role!        
   expertise:   [Expertise!]!
@@ -16,6 +20,7 @@ type User {
 input AuthInput{
     email: String!
     password: String!
+    displayName: String
 }
 type AuthResult{
     token: String
@@ -27,12 +32,18 @@ type AuthResult{
 input UserWhereUniqueInput {
   id: ID
   email: String
+  uid: String
 }
 
 
 input UserUpdateDataInput{
+       
   email:       String       
-  name:        String
+  displayName: String
+  phoneNumber: String
+  emailVerified: Boolean
+  disabled: Boolean
+
   avator:     FileUpdateOneInput 
   role:        Role       
   expertise:   [ExpertiseUpdateOneInput]

@@ -333,16 +333,21 @@ export class TransactionWhereUniqueInput {
 export class AuthInput {
     email: string;
     password: string;
+    displayName?: string;
 }
 
 export class UserWhereUniqueInput {
     id?: string;
     email?: string;
+    uid?: string;
 }
 
 export class UserUpdateDataInput {
     email?: string;
-    name?: string;
+    displayName?: string;
+    phoneNumber?: string;
+    emailVerified?: boolean;
+    disabled?: boolean;
     avator?: FileUpdateOneInput;
     role?: Role;
     expertise?: ExpertiseUpdateOneInput[];
@@ -483,9 +488,13 @@ export abstract class ISubscription {
 }
 
 export class User {
-    id: string;
+    id?: number;
+    uid: string;
     email: string;
-    name: string;
+    displayName: string;
+    phoneNumber?: string;
+    emailVerified: boolean;
+    disabled: boolean;
     avator?: File;
     role: Role;
     expertise: Expertise[];

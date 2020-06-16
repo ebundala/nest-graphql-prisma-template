@@ -3,7 +3,7 @@
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url = "***"
 }
 
 generator client {
@@ -11,25 +11,23 @@ generator client {
 }
 
 model User {
-  id            Int          @default(autoincrement()) @id
-  uid           String       @unique
-  email         String       @unique
-  displayName   String
-  phoneNumber   String?      @unique
-  emailVerified Boolean      @default(false)
-  disabled      Boolean      @default(true)
-  avator        File         @relation(fields: [avatorId], references: [id])
-  avatorId      Int
-  role          Role         @default(USER)
-  expertise     Expertise[]
-  jobs          Job[]
-  bids          Bid[]
-  chats         Chat[]
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  Chat          Chat[]       @relation("chat_author")
-  Message       Message[]
-  TokenOrder    TokenOrder[]
+  id           Int          @default(autoincrement()) @id
+  uid          String       @unique
+  email        String       @unique
+  name         String
+  passwordHash String
+  avator       File         @relation(fields: [avatorId], references: [id])
+  avatorId     Int
+  role         Role         @default(USER)
+  expertise    Expertise[]
+  jobs         Job[]
+  bids         Bid[]
+  chats        Chat[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  Chat         Chat[]       @relation("chat_author")
+  Message      Message[]
+  TokenOrder   TokenOrder[]
 }
 
 model Expertise {
