@@ -1,43 +1,23 @@
-import { Injectable} from '@nestjs/common';
-import {PrismaClient} from '@prisma/client'
+import { Injectable, HttpService } from '@nestjs/common';
+import { PrismaClient } from '@prisma/client'
 import { isEmail, isAlphanumeric, isLength } from 'validator';
-import { AuthInput, AuthResult,Role } from 'src/models/graphql';
+import { AuthInput, AuthResult, Role, User } from 'src/models/graphql';
 import { FirebaseService } from 'src/firebase-admin/firebase.service';
 
 @Injectable()
 export class UserService {
-    constructor(
-       private readonly firebaseApp:FirebaseService,
-       private readonly prisma: PrismaClient
-      ){}
-      async signup(credentials: AuthInput): Promise<AuthResult>{
-
-        return {
-          message:"error incorect credentials",
-        error:"invalid_credentials",
-        user:{
-          id:1,
-          uid: "xxxxxxxxxxxxxx",
-          email:credentials.email,
-          displayName: credentials.displayName,
-          emailVerified: false,
-            disabled: false,
-          role: Role.MODERATOR,
-          createdAt:"",
-          updatedAt:"",
-          TokenOrder:[],
-          bids:[],
-          chats:[],
-          jobs:[],
-          expertise:[
-            {
-              id:"2",name:"tech",weight:111,jobs:[],users:[],createdAt:"",updatedAt:""
-            }
-          ]
-        }
-      };
-      }
-    /* async signupWithEmail(data: AuthInput) {
+  constructor(
+    private readonly firebaseApp: FirebaseService,
+    private readonly prisma: PrismaClient,
+    private readonly httpService: HttpService
+  ) {
+    this.httpService.axiosRef.defaults.baseURL = this.firebaseApp.signInWithProviderHost;
+    this.httpService.axiosRef.defaults.headers.post['Content-Type'] = 'application/json';
+  }
+  async signup(credentials: AuthInput): Promise<AuthResult> {
+    return this.signupWithEmail(credentials)
+  }
+  async signupWithEmail(data: AuthInput): Promise<AuthResult> {
     const { email, password, displayName } = data;
     if (!isEmail(email)) {
       throw new Error('Invalid Email');
@@ -45,9 +25,9 @@ export class UserService {
       throw new Error('Password must be atleast 6 characters long');
     } else if (!isLength(displayName, 3)) {
       throw new Error('Username must be 3 characters or more');
-    } else if (!isAlphanumeric(displayName)) {
+    }/* else if (!isAlphanumeric(displayName)) {
       throw new Error('Username can not contain special characters');
-    } else {
+    }*/ else {
       const users = this.prisma.user;
       const exist = await users
         .findOne({ where: { email } })
@@ -68,44 +48,56 @@ export class UserService {
                 emailVerified: user.emailVerified,
                 avator: {
                   create: {
-                    path: user.photoURL,
-                    filename: user.photoURL,
+                    path: user.photoURL || "",
+                    filename: user.photoURL || "",
                     mimetype: 'image/*',
                     encoding: 'UTF-8',
                   },
                 },
                 role: Role.USER,
               },
-            }),
+            }).catch(async (e) => {
+              await users.delete({ where: { email } });
+              throw e;
+            })
           )
           .then(async (user) => {
             const setClaims = await this._setUserClaims(user);
             if (setClaims) {
+              debugger
               const session = await this.signInWithEmail({ email, password })
-                .then(({ idToken }) => this.createSessionToken(idToken))
+               // .then(({ idToken }) => this.createSessionToken(idToken))
                 .catch((e) => e);
+                
               if (session instanceof Error) {
+                await this.cleanUpOnSignUpFailure(user);
                 throw session;
               }
               return session;
             }
 
-            const remove1 = await this.admin
-              .auth()
-              .deleteUser(user.uid)
-              .then(() => true)
-              .catch(() => false);
-            const remove2 = await users
-              .delete({ where: { id: user.id } })
-              .then(() => true)
-              .catch(() => false);
-            if (remove1 && remove2) {
-              throw Error('Failed to create user account');
-            } else throw Error('Failed to cleanup user signup errors');
+            if (!await this.cleanUpOnSignUpFailure(user)) {
+              throw Error('Failed to cleanup user signup errors')
+            };
+            throw Error('Failed to create user account')
           })
-          .then((user) => user);
+          .then((session) => session);
       }
     }
+  }
+
+  private async cleanUpOnSignUpFailure(user) {
+   
+    const remove1 = await this.firebaseApp.admin
+      .auth()
+      .deleteUser(user.uid)
+      .then(() => true)
+      .catch(() => false);
+    const remove2 = await this.prisma.user
+      .delete({ where: { uid: user.uid } })
+      .then(() => true)
+      .catch(() => false);
+    return remove1 && remove2;
   }
 
   signInWithEmail({ email, password }) {
@@ -114,11 +106,10 @@ export class UserService {
       JSON.stringify({ email, password, returnSecureToken }),
     );
     return this.httpService.axiosRef
-      .post(this.signInWithEmailPath, buffer)
-      .then(async ({ status, headers, data }) => {
+      .post(this.firebaseApp.signInWithEmailPath, buffer)
+      .then(async ({ status, data }) => {
         if (status === 200) {
-          const credential = JSON.parse(data);
-          const { idToken } = credential;
+          const { idToken } = data;
           const session = await this.createSessionToken(idToken).catch(
             (e) => e,
           );
@@ -127,14 +118,13 @@ export class UserService {
             throw new Error(message || 'Signin failed something went wrong');
           }
           return session;
-          // this.collection.document(localId).then((user) => ({ user, sessionToken }));
         }
         throw Error(data);
       });
   }
 
   _createUserWithEmail(email, password, displayName) {
-    return this.admin.auth().createUser({
+    return this.firebaseApp.admin.auth().createUser({
       email,
       emailVerified: false,
       // phoneNumber: '+11234567890',
@@ -145,8 +135,8 @@ export class UserService {
     });
   }
 
-  _setUserClaims(user: User) {
-    return this.admin
+  _setUserClaims(user) {
+    return this.firebaseApp.admin
       .auth()
       .setCustomUserClaims(user.uid, { role: Role.USER })
       .then(() => true)
@@ -154,14 +144,15 @@ export class UserService {
   }
 
   createSessionToken(idToken, expiresIn = 60 * 60 * 5 * 24 * 1000) {
-    return this.admin
+    
+    return this.firebaseApp.admin
       .auth()
       .verifyIdToken(idToken, true)
       .then((decodedIdToken) => {
         // Only process if the user just signed in in the last 5 minutes.
         if (new Date().getTime() / 1000 - decodedIdToken.auth_time < 5 * 60) {
           // Create session cookie and return it.
-          return this.admin
+          return this.firebaseApp.admin
             .auth()
             .createSessionCookie(idToken, { expiresIn })
             .then((token) => {
@@ -183,18 +174,18 @@ export class UserService {
   }
 
   destroySessionToken(sessionToken) {
-    return this.admin
+    return this.firebaseApp.admin
       .auth()
       .verifySessionCookie(sessionToken)
       .then((decodedClaims) =>
-        this.admin.auth().revokeRefreshTokens(decodedClaims.sub),
+        this.firebaseApp.admin.auth().revokeRefreshTokens(decodedClaims.sub),
       )
       .then(() => ({
         status: true,
         message: 'Session destroyed successfully',
       }));
   }
-*/
+
   /*
   linkIdProvider({ idToken, username }) {
     log(idToken);

@@ -1,9 +1,9 @@
-import { Injectable, Inject, HttpService, Optional } from '@nestjs/common';
+import { Injectable, Inject, HttpService, Optional, Scope } from '@nestjs/common';
 import * as _admin from 'firebase-admin';
 import { ConfigService } from '@nestjs/config';
 
 
-//Todo use IOC to handle database manipulation
+
 @Injectable()
 export class FirebaseService {
   private _app: _admin.app.App;
@@ -21,10 +21,8 @@ export class FirebaseService {
   ) {
     this.FIREBASE_API_KEY = this.config.get<String>('FIREBASE_API_KEY');
     this._signInWithProviderPath = `/v1/accounts:signInWithIdp?key=${this.FIREBASE_API_KEY}`;
-    this._signInWithEmailPath ==
-      `/v1/accounts:signInWithPassword?key=${this.FIREBASE_API_KEY}`;
+    this._signInWithEmailPath = `/v1/accounts:signInWithPassword?key=${this.FIREBASE_API_KEY}`;
 
-      if(_admin)
     if (this.appOptions) {
       this._app = _admin.initializeApp(
         this.appOptions.options,

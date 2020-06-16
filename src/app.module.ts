@@ -7,6 +7,7 @@ import { UserModule } from './user/user.module';
 import { UserService } from './user/user-service';
 import { PrismaClientModule } from './prisma-client/prisma-client.module';
 import { UsersResolver } from './user/user.resolver';
+import { FirebaseModule } from './firebase-admin/firebase.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { UsersResolver } from './user/user.resolver';
       playground: true,
     }),
    UserModule,
+   FirebaseModule
   ],
  //providers: [UsersResolver,],
 })

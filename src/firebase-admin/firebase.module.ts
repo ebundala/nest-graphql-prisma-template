@@ -1,7 +1,7 @@
-import { Module, DynamicModule } from '@nestjs/common';
+import { Module, DynamicModule, Global } from '@nestjs/common';
 import { FirebaseService } from './firebase.service';
 import * as _admin from 'firebase-admin';
-
+@Global()
 @Module({
 
   providers: [FirebaseService],
