@@ -6,6 +6,8 @@ import {
   Int,
   Args,
   Parent,
+  Info,
+  Context,
 } from '@nestjs/graphql';
 import { User, AuthInput, AuthResult, Role } from '../models/graphql';
 import { UserService } from './user-service';
@@ -18,6 +20,8 @@ export class UsersResolver {
   @Mutation((returns) => User)
   async signup(
     @Args('credentials', { type: () => AuthInput }) credentials: AuthInput,
+    @Info() info,
+    @Context() ctx
   ): Promise<AuthResult> {
    return this.userService.signup(credentials);
   }
